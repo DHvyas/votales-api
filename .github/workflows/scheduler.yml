@@ -1,9 +1,17 @@
 name: VoTales Heartbeat
 
 on:
+  # 1. The Schedule (Keep Alive)
   schedule:
-    # Run every 14 minutes to prevent Render from sleeping (Sleeps at 15m)
     - cron: '*/14 * * * *'
+  
+  # 2. The Manual Button (CLICK TO TEST)
+  workflow_dispatch:
+
+  # 3. The Jump Start (Runs immediately when you push this code)
+  push:
+    branches:
+      - main
 
 jobs:
   keep-alive:
@@ -12,6 +20,4 @@ jobs:
       - name: Wake Up API (Keep Alive)
         run: |
           echo "Pinging Health Endpoint..."
-          # This hits your existing controller.
-          # If it fails (-f), the action fails, and you get an email alert.
           curl -f -X GET https://api.votales.app/api/health/heartbeat
