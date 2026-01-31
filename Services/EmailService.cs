@@ -1,5 +1,6 @@
-using MailKit.Net.Smtp;
-using MimeKit;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
 
 namespace VoTales.API.Services;
 
@@ -7,11 +8,52 @@ public class EmailService : IEmailService
 {
     private readonly IConfiguration _configuration;
     private readonly ILogger<EmailService> _logger;
+    private readonly IHttpClientFactory _httpClientFactory;
+    private const string ResendApiUrl = "https://api.resend.com/emails";
 
-    public EmailService(IConfiguration configuration, ILogger<EmailService> logger)
+    public EmailService(IConfiguration configuration, ILogger<EmailService> logger, IHttpClientFactory httpClientFactory)
     {
         _configuration = configuration;
         _logger = logger;
+        _httpClientFactory = httpClientFactory;
+    }
+
+    private async Task<bool> SendEmailViaApiAsync(string to, string subject, string htmlBody)
+    {
+        var smtpSettings = _configuration.GetSection("SmtpSettings");
+        var apiKey = smtpSettings["Password"];
+        var toEmail = smtpSettings["ToEmail"];
+
+        if (string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(toEmail))
+        {
+            _logger.LogWarning("Resend API settings are not configured. Skipping email notification.");
+            return false;
+        }
+
+        var emailPayload = new
+        {
+            from = "VoTales <noreply@votales.app>",
+            to = new[] { to },
+            subject,
+            html = htmlBody
+        };
+
+        var jsonContent = JsonSerializer.Serialize(emailPayload);
+        using var httpClient = _httpClientFactory.CreateClient();
+        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+
+        var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+        var response = await httpClient.PostAsync(ResendApiUrl, content);
+
+        if (response.IsSuccessStatusCode)
+        {
+            _logger.LogInformation("Email sent successfully via Resend API to {ToEmail}", to);
+            return true;
+        }
+
+        var responseBody = await response.Content.ReadAsStringAsync();
+        _logger.LogError("Failed to send email via Resend API. Status: {StatusCode}, Response: {Response}", response.StatusCode, responseBody);
+        return false;
     }
 
     public async Task SendCriticalErrorAsync(string title, string details)
@@ -19,55 +61,32 @@ public class EmailService : IEmailService
         try
         {
             var smtpSettings = _configuration.GetSection("SmtpSettings");
-
-            var host = smtpSettings["Host"];
-            var port = int.Parse(smtpSettings["Port"] ?? "587");
-            var username = smtpSettings["Username"];
-            var password = smtpSettings["Password"];
             var toEmail = smtpSettings["ToEmail"];
 
-            if (string.IsNullOrEmpty(host) || string.IsNullOrEmpty(username) ||
-                string.IsNullOrEmpty(password) || string.IsNullOrEmpty(toEmail))
+            if (string.IsNullOrEmpty(toEmail))
             {
-                _logger.LogWarning("SMTP settings are not configured. Skipping email notification.");
+                _logger.LogWarning("ToEmail is not configured. Skipping email notification.");
                 return;
             }
 
-            var message = new MimeMessage();
-            message.From.Add(new MailboxAddress("VoTales API Alert", "noreply@votales.app"));
-            message.To.Add(new MailboxAddress("Admin", toEmail));
-            message.Subject = $"🚨 Critical Error: {title}";
+            var subject = $"🚨 Critical Error: {title}";
+            var htmlBody = $"""
+                <html>
+                <body style="font-family: Arial, sans-serif; padding: 20px;">
+                    <h2 style="color: #d9534f;">🚨 Critical Error in VoTales API</h2>
+                    <p><strong>Title:</strong> {title}</p>
+                    <hr style="border: 1px solid #ddd;" />
+                    <h3>Details:</h3>
+                    <pre style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto;">{details}</pre>
+                    <hr style="border: 1px solid #ddd;" />
+                    <p style="color: #888; font-size: 12px;">
+                        Sent at: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
+                    </p>
+                </body>
+                </html>
+                """;
 
-            var bodyBuilder = new BodyBuilder
-            {
-                HtmlBody = $"""
-                    <html>
-                    <body style="font-family: Arial, sans-serif; padding: 20px;">
-                        <h2 style="color: #d9534f;">🚨 Critical Error in VoTales API</h2>
-                        <p><strong>Title:</strong> {title}</p>
-                        <hr style="border: 1px solid #ddd;" />
-                        <h3>Details:</h3>
-                        <pre style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto;">{details}</pre>
-                        <hr style="border: 1px solid #ddd;" />
-                        <p style="color: #888; font-size: 12px;">
-                            Sent at: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
-                        </p>
-                    </body>
-                    </html>
-                    """
-            };
-
-            message.Body = bodyBuilder.ToMessageBody();
-
-            using var client = new SmtpClient();
-            await client.ConnectAsync(host, 465, MailKit.Security.SecureSocketOptions.SslOnConnect);
-            client.AuthenticationMechanisms.Remove("XOAUTH2");
-            client.AuthenticationMechanisms.Remove("GSSAPI");
-            await client.AuthenticateAsync(username, password);
-            await client.SendAsync(message);
-            await client.DisconnectAsync(true);
-
-            _logger.LogInformation("Critical error email sent successfully to {ToEmail}", toEmail);
+            await SendEmailViaApiAsync(toEmail, subject, htmlBody);
         }
         catch (Exception ex)
         {
@@ -80,57 +99,34 @@ public class EmailService : IEmailService
         try
         {
             var smtpSettings = _configuration.GetSection("SmtpSettings");
-
-            var host = smtpSettings["Host"];
-            var port = int.Parse(smtpSettings["Port"] ?? "587");
-            var username = smtpSettings["Username"];
-            var password = smtpSettings["Password"];
             var toEmail = smtpSettings["ToEmail"];
 
-            if (string.IsNullOrEmpty(host) || string.IsNullOrEmpty(username) ||
-                string.IsNullOrEmpty(password) || string.IsNullOrEmpty(toEmail))
+            if (string.IsNullOrEmpty(toEmail))
             {
-                _logger.LogWarning("SMTP settings are not configured. Skipping email notification.");
+                _logger.LogWarning("ToEmail is not configured. Skipping email notification.");
                 return;
             }
 
             var displayEmail = string.IsNullOrWhiteSpace(userEmail) ? "Anonymous" : userEmail;
 
-            var mimeMessage = new MimeMessage();
-            mimeMessage.From.Add(new MailboxAddress("VoTales Feedback", "noreply@votales.app"));
-            mimeMessage.To.Add(new MailboxAddress("Admin", toEmail));
-            mimeMessage.Subject = "📬 New Feedback Received";
+            var subject = "📬 New Feedback Received";
+            var htmlBody = $"""
+                <html>
+                <body style="font-family: Arial, sans-serif; padding: 20px;">
+                    <h2 style="color: #5bc0de;">📬 New Feedback Received</h2>
+                    <p><strong>From:</strong> {displayEmail}</p>
+                    <hr style="border: 1px solid #ddd;" />
+                    <h3>Message:</h3>
+                    <pre style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto;">{message}</pre>
+                    <hr style="border: 1px solid #ddd;" />
+                    <p style="color: #888; font-size: 12px;">
+                        Received at: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
+                    </p>
+                </body>
+                </html>
+                """;
 
-            var bodyBuilder = new BodyBuilder
-            {
-                HtmlBody = $"""
-                    <html>
-                    <body style="font-family: Arial, sans-serif; padding: 20px;">
-                        <h2 style="color: #5bc0de;">📬 New Feedback Received</h2>
-                        <p><strong>From:</strong> {displayEmail}</p>
-                        <hr style="border: 1px solid #ddd;" />
-                        <h3>Message:</h3>
-                        <pre style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto;">{message}</pre>
-                        <hr style="border: 1px solid #ddd;" />
-                        <p style="color: #888; font-size: 12px;">
-                            Received at: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
-                        </p>
-                    </body>
-                    </html>
-                    """
-            };
-
-            mimeMessage.Body = bodyBuilder.ToMessageBody();
-
-            using var client = new SmtpClient();
-            await client.ConnectAsync(host, 465, MailKit.Security.SecureSocketOptions.SslOnConnect);
-            client.AuthenticationMechanisms.Remove("XOAUTH2");
-            client.AuthenticationMechanisms.Remove("GSSAPI");
-            await client.AuthenticateAsync(username, password);
-            await client.SendAsync(mimeMessage);
-            await client.DisconnectAsync(true);
-
-            _logger.LogInformation("Feedback received email sent successfully to {ToEmail}", toEmail);
+            await SendEmailViaApiAsync(toEmail, subject, htmlBody);
         }
         catch (Exception ex)
         {

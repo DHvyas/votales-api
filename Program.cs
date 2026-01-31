@@ -80,6 +80,7 @@ builder.Services.AddScoped<ITaleService, TaleService>();
 builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddHttpClient();
 builder.Services.AddScoped<ExceptionHandlingMiddleware>();
 
 // 6. Configure JWT Authentication
