@@ -60,7 +60,7 @@ public class EmailService : IEmailService
             message.Body = bodyBuilder.ToMessageBody();
 
             using var client = new SmtpClient();
-            await client.ConnectAsync(host, port, MailKit.Security.SecureSocketOptions.StartTls);
+            await client.ConnectAsync(host, 465, MailKit.Security.SecureSocketOptions.SslOnConnect);
             client.AuthenticationMechanisms.Remove("XOAUTH2");
             client.AuthenticationMechanisms.Remove("GSSAPI");
             await client.AuthenticateAsync(username, password);
@@ -123,7 +123,7 @@ public class EmailService : IEmailService
             mimeMessage.Body = bodyBuilder.ToMessageBody();
 
             using var client = new SmtpClient();
-            await client.ConnectAsync(host, port, MailKit.Security.SecureSocketOptions.StartTls);
+            await client.ConnectAsync(host, 465, MailKit.Security.SecureSocketOptions.SslOnConnect);
             client.AuthenticationMechanisms.Remove("XOAUTH2");
             client.AuthenticationMechanisms.Remove("GSSAPI");
             await client.AuthenticateAsync(username, password);
