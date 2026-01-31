@@ -4,7 +4,7 @@ on:
   # 1. The Schedule (Keep Alive)
   schedule:
     - cron: '*/14 * * * *'
-  
+    - cron: '0 * * * *'
   # 2. The Manual Button (CLICK TO TEST)
   workflow_dispatch:
 
@@ -21,3 +21,11 @@ jobs:
         run: |
           echo "Pinging Health Endpoint..."
           curl -f -X GET https://api.votales.app/api/health/heartbeat
+  update-trending:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 * * * *'
+    steps:
+      - name: Run Gravity Decay Algorithm
+        run: |
+          curl -f -X POST https://api.votales.app/api/jobs/update-trending \
+          -H "X-Job-Secret: ${{ secrets.JOB_SECRET }}"
