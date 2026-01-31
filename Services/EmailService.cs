@@ -61,6 +61,8 @@ public class EmailService : IEmailService
 
             using var client = new SmtpClient();
             await client.ConnectAsync(host, port, MailKit.Security.SecureSocketOptions.StartTls);
+            client.AuthenticationMechanisms.Remove("XOAUTH2");
+            client.AuthenticationMechanisms.Remove("GSSAPI");
             await client.AuthenticateAsync(username, password);
             await client.SendAsync(message);
             await client.DisconnectAsync(true);
@@ -122,6 +124,8 @@ public class EmailService : IEmailService
 
             using var client = new SmtpClient();
             await client.ConnectAsync(host, port, MailKit.Security.SecureSocketOptions.StartTls);
+            client.AuthenticationMechanisms.Remove("XOAUTH2");
+            client.AuthenticationMechanisms.Remove("GSSAPI");
             await client.AuthenticateAsync(username, password);
             await client.SendAsync(mimeMessage);
             await client.DisconnectAsync(true);
