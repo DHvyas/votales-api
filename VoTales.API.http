@@ -1,0 +1,6 @@
+@VoTales.API_HostAddress = http://localhost:5250
+
+GET {{VoTales.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
