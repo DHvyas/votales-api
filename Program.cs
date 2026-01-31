@@ -62,9 +62,15 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:5173")
-              .AllowAnyHeader()
-              .AllowAnyMethod();
+        policy.WithOrigins(
+            "http://localhost:5173",                  // Localhost (Development)
+            "https://votales-web.vercel.app",         // Vercel Deployment
+            "https://votales.app",                    // Your Custom Domain
+            "https://www.votales.app"                 // Custom Domain (www)
+        )
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials(); // Important for Auth headers
     });
 });
 
