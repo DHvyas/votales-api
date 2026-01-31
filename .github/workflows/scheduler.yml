@@ -1,0 +1,17 @@
+name: VoTales Heartbeat
+
+on:
+  schedule:
+    # Run every 14 minutes to prevent Render from sleeping (Sleeps at 15m)
+    - cron: '*/14 * * * *'
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wake Up API (Keep Alive)
+        run: |
+          echo "Pinging Health Endpoint..."
+          # This hits your existing controller.
+          # If it fails (-f), the action fails, and you get an email alert.
+          curl -f -X GET https://api.votales.app/api/health/heartbeat
