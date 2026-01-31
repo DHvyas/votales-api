@@ -34,7 +34,7 @@ public class EmailService : IEmailService
             }
 
             var message = new MimeMessage();
-            message.From.Add(new MailboxAddress("VoTales API Alert", username));
+            message.From.Add(new MailboxAddress("VoTales API Alert", "noreply@votales.app"));
             message.To.Add(new MailboxAddress("Admin", toEmail));
             message.Subject = $"🚨 Critical Error: {title}";
 
@@ -69,7 +69,7 @@ public class EmailService : IEmailService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send critical error email. Email sending failed but application continues.");
+            _logger.LogError(ex, "Failed to send critical error email: {ErrorMessage}. Email sending failed but application continues.", ex.Message);
         }
     }
 
@@ -95,7 +95,7 @@ public class EmailService : IEmailService
             var displayEmail = string.IsNullOrWhiteSpace(userEmail) ? "Anonymous" : userEmail;
 
             var mimeMessage = new MimeMessage();
-            mimeMessage.From.Add(new MailboxAddress("VoTales Feedback", username));
+            mimeMessage.From.Add(new MailboxAddress("VoTales Feedback", "noreply@votales.app"));
             mimeMessage.To.Add(new MailboxAddress("Admin", toEmail));
             mimeMessage.Subject = "📬 New Feedback Received";
 
@@ -130,7 +130,7 @@ public class EmailService : IEmailService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send feedback received email. Email sending failed but application continues.");
+            _logger.LogError(ex, "Failed to send feedback received email: {ErrorMessage}. Email sending failed but application continues.", ex.Message);
         }
     }
 }
