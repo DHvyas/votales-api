@@ -28,7 +28,7 @@ public class FeedbackService : IFeedbackService
         _dbContext.Feedbacks.Add(feedback);
         await _dbContext.SaveChangesAsync();
 
-        await _emailService.SendFeedbackReceivedAsync(request.Email, request.Message);
+        _ = Task.Run(() => _emailService.SendFeedbackReceivedAsync(request.Email, request.Message));
 
         return feedback.Id;
     }

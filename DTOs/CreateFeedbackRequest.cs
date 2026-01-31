@@ -4,11 +4,9 @@ namespace VoTales.API.DTOs;
 
 public class CreateFeedbackRequest
 {
-    [Required]
     [EmailAddress]
-    public string Email { get; set; } = string.Empty;
+    public string? Email { get; set; }
 
     [Required]
-    [MinLength(10, ErrorMessage = "Message must be at least 10 characters long.")]
     public string Message { get; set; } = string.Empty;
 }

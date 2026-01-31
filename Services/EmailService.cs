@@ -73,7 +73,7 @@ public class EmailService : IEmailService
         }
     }
 
-    public async Task SendFeedbackReceivedAsync(string userEmail, string message)
+    public async Task SendFeedbackReceivedAsync(string? userEmail, string message)
     {
         try
         {
@@ -92,6 +92,8 @@ public class EmailService : IEmailService
                 return;
             }
 
+            var displayEmail = string.IsNullOrWhiteSpace(userEmail) ? "Anonymous" : userEmail;
+
             var mimeMessage = new MimeMessage();
             mimeMessage.From.Add(new MailboxAddress("VoTales Feedback", username));
             mimeMessage.To.Add(new MailboxAddress("Admin", toEmail));
@@ -103,7 +105,7 @@ public class EmailService : IEmailService
                     <html>
                     <body style="font-family: Arial, sans-serif; padding: 20px;">
                         <h2 style="color: #5bc0de;">📬 New Feedback Received</h2>
-                        <p><strong>From:</strong> {userEmail}</p>
+                        <p><strong>From:</strong> {displayEmail}</p>
                         <hr style="border: 1px solid #ddd;" />
                         <h3>Message:</h3>
                         <pre style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto;">{message}</pre>
