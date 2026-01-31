@@ -7,8 +7,7 @@ public class Feedback
     [Key]
     public Guid Id { get; set; }
 
-    [Required]
-    public string UserEmail { get; set; } = string.Empty;
+    public string? UserEmail { get; set; }
 
     [Required]
     public string Message { get; set; } = string.Empty;
